@@ -1,7 +1,7 @@
-use crate::roninc::token::{Delimiter, LitKind, LnCol, Token, TokenKind};
+use crate::roninc::token::{Delimiter, LitKind, LnCol, PermKind, Token, TokenKind};
 use std::{fmt::Error, fs, iter::Peekable, str::Chars};
 
-use super::token::{self, PermKind};
+use super::token;
 
 pub(crate) struct Lexer<'a> {
     pub tokens: &'a mut Vec<Token>,
@@ -13,7 +13,7 @@ pub fn emit_tokens(path: &str) -> Result<Vec<Token>, Error> {
     let input: String = match fs::read_to_string(path) {
         Ok(res) => res,
         Err(err) => {
-            eprintln!("Error: {err}");
+            eprintln!("emit_tokens: {err}");
             return Err(Error);
         }
     };
@@ -28,6 +28,8 @@ pub fn emit_tokens(path: &str) -> Result<Vec<Token>, Error> {
             _ => lexer.get_tokens(),
         }
     }
+
+    lexer.t_push(TokenKind::EOF, 0, 1);
 
     Ok(tokens)
 }
@@ -66,68 +68,50 @@ impl<'a> Lexer<'a> {
         match Self::is_keyword(&lxm) {
             Some(tk) if tk.is_permission() => {
                 if let Some(lt) = self.tokens.last_mut() {
-                    if lt.pos.col == self.pos.col - 1 {
+                    if lt.kind.eq(&TokenKind::Div) && lt.pos.col == self.pos.col - 1 {
                         lt.kind = tk;
                     } else {
-                        self.tokens.push(Token::new(
-                            TokenKind::Ident(lxm.clone()),
-                            self.pos.update(0, lxm.len()),
-                        ))
+                        self.t_push(TokenKind::Ident(lxm.clone()), 0, lxm.len())
                     }
                 }
             }
-            Some(tk) => self
-                .tokens
-                .push(Token::new(tk, self.pos.update(0, lxm.len()))),
-            None => self.tokens.push(Token::new(
-                TokenKind::Ident(lxm.clone()),
-                self.pos.update(0, lxm.len()),
-            )),
+            Some(tk) => self.t_push(tk, 0, lxm.len()),
+            None => self.t_push(TokenKind::Ident(lxm.clone()), 0, lxm.len()),
         }
     }
 
+    // &=0
+    //   ^
     fn get_punctuation(&mut self) {
-        let pt: TokenKind = match self.iter.next() {
-            Some(ch) => match ch {
-                ';' => TokenKind::Semi,
-                ':' => TokenKind::Colon,
-                '{' => TokenKind::OpenDelim(Delimiter::Brace),
-                '(' => TokenKind::OpenDelim(Delimiter::Paren),
-                ')' => TokenKind::CloseDelim(Delimiter::Paren),
-                '}' => TokenKind::CloseDelim(Delimiter::Brace),
-                '[' => TokenKind::OpenDelim(Delimiter::Bracket),
-                ']' => TokenKind::CloseDelim(Delimiter::Bracket),
-                '=' => TokenKind::Eq,
-                '-' => TokenKind::Minus,
-                '+' => TokenKind::Plus,
-                '/' => TokenKind::Div,
-                '*' => TokenKind::Star,
-                '.' => TokenKind::Dot,
-                ',' => TokenKind::Comma,
-                '\'' => TokenKind::SingleQuote,
-                '\"' => TokenKind::DoubleQuote,
-                '!' => TokenKind::Not,
-                '&' => TokenKind::And,
-                '|' => TokenKind::Or,
-                '>' => TokenKind::Gt,
-                '<' => TokenKind::Lt,
-                '#' => TokenKind::Hashtag,
-                '%' => TokenKind::Percent,
-                '\\' => TokenKind::BSlash,
-                '@' => TokenKind::At,
-                _ => {
-                    eprintln!(
-                        "Unknown character encountered at ln: {}, col: {}",
-                        self.pos.ln, self.pos.col
-                    );
-
-                    TokenKind::Undef(ch)
+        let kind: TokenKind = match self.iter.next() {
+            Some(ch) => match TokenKind::match_punctuation(&ch) {
+                Some(res) => res,
+                None => {
+                    self.t_push(TokenKind::Undef(ch), 0, 1);
+                    return;
                 }
             },
-            None => TokenKind::EOF,
+            None => {
+                self.t_push(TokenKind::EOF, 0, 1);
+                return;
+            }
         };
 
-        self.tokens.push(Token::new(pt, self.pos.update(0, 1)));
+        let ch = match self.iter.peek() {
+            Some(ch) => ch,
+            None => {
+                self.t_push(kind, 0, 1);
+                return;
+            }
+        };
+
+        match kind.get_combo(ch) {
+            Some(res) => {
+                self.t_push(res, 0, 2);
+                self.iter.next();
+            }
+            None => self.t_push(kind, 0, 1),
+        }
     }
 
     fn is_keyword(lxm: &str) -> Option<TokenKind> {
@@ -169,14 +153,16 @@ impl<'a> Lexer<'a> {
         }
 
         match dot {
-            true => self.tokens.push(Token::new(
+            true => self.t_push(
                 TokenKind::Literal(LitKind::Float(lxm.clone())),
-                self.pos.update(0, lxm.len()),
-            )),
-            false => self.tokens.push(Token::new(
+                0,
+                lxm.len(),
+            ),
+            false => self.t_push(
                 TokenKind::Literal(LitKind::Integer(lxm.clone())),
-                self.pos.update(0, lxm.len()),
-            )),
+                0,
+                lxm.len(),
+            ),
         }
     }
 
@@ -205,5 +191,9 @@ impl<'a> Lexer<'a> {
         }
 
         self.pos.ln += 1;
+    }
+
+    fn t_push(&mut self, tk: TokenKind, ln: usize, col: usize) {
+        self.tokens.push(Token::new(tk, self.pos.update(ln, col)));
     }
 }
