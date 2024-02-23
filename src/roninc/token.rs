@@ -55,7 +55,7 @@ pub enum TokenKind {
     AndAnd,
     OrOr,
     At,
-    FwSlash,
+    Div,
     BSlash,
     Not,
     Hashtag,
@@ -91,6 +91,15 @@ pub enum TokenKind {
 }
 
 // Implementations
+impl TokenKind {
+    pub(crate) fn is_permission(&self) -> bool {
+        match self {
+            TokenKind::Permission(_perm_kind) => true,
+            _ => false,
+        }
+    }
+}
+
 impl LnCol {
     /// Creates a new [`Position`].
     pub(crate) fn new(ln: usize, col: usize) -> Self {

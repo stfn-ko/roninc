@@ -1,7 +1,7 @@
 use crate::roninc::token::{Delimiter, LitKind, LnCol, Token, TokenKind};
 use std::{fmt::Error, fs, iter::Peekable, str::Chars};
 
-use super::token::PermKind;
+use super::token::{self, PermKind};
 
 pub(crate) struct Lexer<'a> {
     pub tokens: &'a mut Vec<Token>,
@@ -64,6 +64,18 @@ impl<'a> Lexer<'a> {
         }
 
         match Self::is_keyword(&lxm) {
+            Some(tk) if tk.is_permission() => {
+                if let Some(lt) = self.tokens.last_mut() {
+                    if lt.pos.col == self.pos.col - 1 {
+                        lt.kind = tk;
+                    } else {
+                        self.tokens.push(Token::new(
+                            TokenKind::Ident(lxm.clone()),
+                            self.pos.update(0, lxm.len()),
+                        ))
+                    }
+                }
+            }
             Some(tk) => self
                 .tokens
                 .push(Token::new(tk, self.pos.update(0, lxm.len()))),
@@ -88,7 +100,7 @@ impl<'a> Lexer<'a> {
                 '=' => TokenKind::Eq,
                 '-' => TokenKind::Minus,
                 '+' => TokenKind::Plus,
-                '/' => TokenKind::FwSlash,
+                '/' => TokenKind::Div,
                 '*' => TokenKind::Star,
                 '.' => TokenKind::Dot,
                 ',' => TokenKind::Comma,
@@ -131,6 +143,8 @@ impl<'a> Lexer<'a> {
             "main" => Some(TokenKind::Main),
             "true" => Some(TokenKind::True),
             "false" => Some(TokenKind::False),
+            "r" => Some(TokenKind::Permission(PermKind::R)),
+            "rw" => Some(TokenKind::Permission(PermKind::RW)),
             _ => None,
         }
     }
