@@ -1,7 +1,5 @@
-use crate::roninc::token::{Delimiter, LitKind, LnCol, PermKind, Token, TokenKind};
+use crate::roninc::token::{LitKind, LnCol, PermKind, Token, TokenKind};
 use std::{fmt::Error, fs, iter::Peekable, str::Chars};
-
-use super::token;
 
 pub(crate) struct Lexer<'a> {
     pub tokens: &'a mut Vec<Token>,
