@@ -11,7 +11,7 @@ pub fn emit_tokens(path: &str) -> Result<Vec<Token>, Error> {
     let input: String = match fs::read_to_string(path) {
         Ok(res) => res,
         Err(err) => {
-            eprintln!("emit_tokens: {err}");
+            eprintln!("lexer::emit_tokens >> {err}");
             return Err(Error);
         }
     };
@@ -23,6 +23,8 @@ pub fn emit_tokens(path: &str) -> Result<Vec<Token>, Error> {
         match ch {
             ch if ch.is_whitespace() => lexer.skip_whitespace(),
             '#' => lexer.skip_comments(),
+            '\"' => lexer.get_string(),
+            '\'' => lexer.get_char(),
             _ => lexer.get_tokens(),
         }
     }
@@ -78,8 +80,6 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    // &=0
-    //   ^
     fn get_punctuation(&mut self) {
         let kind: TokenKind = match self.iter.next() {
             Some(ch) => match TokenKind::match_punctuation(&ch) {
@@ -162,6 +162,16 @@ impl<'a> Lexer<'a> {
                 lxm.len(),
             ),
         }
+    }
+
+    fn get_string(&mut self) /* -> Result<char, Error> */
+    {
+        todo!()
+    }
+
+    fn get_char(&mut self) /* -> Result<char, Error> */
+    {
+        todo!()
     }
 
     fn skip_whitespace(&mut self) {
