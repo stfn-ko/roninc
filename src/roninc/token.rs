@@ -19,7 +19,7 @@ pub struct Token {
 
 #[derive(Debug)]
 pub enum LitKind {
-    Char(char),
+    Char(String),
     Integer(String),
     Float(String),
     String(String),

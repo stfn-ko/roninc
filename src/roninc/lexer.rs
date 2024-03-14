@@ -171,7 +171,51 @@ impl<'a> Lexer<'a> {
 
     fn get_char(&mut self) /* -> Result<char, Error> */
     {
-        todo!()
+        self.iter.next();
+        let mut it: usize = 0;
+        let mut lxm: [char; 2] = ['\0', '\0'];
+        while let Some(&ch) = self.iter.peek() {
+            if it == 2 {
+                break;
+            }
+
+            lxm[it] = ch;
+
+            self.iter.next();
+            it += 1;
+        }
+
+        let cq = match self.iter.peek() {
+            Some(&c) => c,
+            None => return,
+        };
+
+        if lxm[0] == '\\' && cq != '\'' {
+            if lxm[1] == '\'' {
+                eprintln!("roninc::lexer >> unescaped character");
+            } else {
+                eprintln!("roninc::lexer >> char literal is missing a closing sign");
+            }
+            /* todo! => push error into error buffer with non-crit flag */
+        }
+
+        if lxm[0] == '\'' {
+            eprintln!("roninc::lexer >> empty char literal");
+        }
+
+        if lxm[0] != '\\' && lxm[1] != '\'' {
+            eprintln!("roninc::lexer >> character literal may only contain one codepoint");
+        }
+
+        println!("{}{}", lxm[0], lxm[1]);
+
+        self.t_push(
+            TokenKind::Literal(LitKind::Char(lxm.iter().collect())),
+            0,
+            lxm.len(),
+        );
+
+        self.iter.next();
     }
 
     fn skip_whitespace(&mut self) {
