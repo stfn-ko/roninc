@@ -1,5 +1,5 @@
-use crate::roninc::token::{LitKind, LnCol, PermKind, Token, TokenKind};
-use std::{fmt::Error, fs, iter::Peekable, str::Chars};
+use crate::roninc::token::{LitKind, LnCol, Token, TokenKind};
+use std::{fmt::Error, fs, iter::Peekable, ops::Index, str::Chars};
 
 pub(crate) struct Lexer<'a> {
     pub tokens: &'a mut Vec<Token>,
@@ -65,7 +65,7 @@ impl<'a> Lexer<'a> {
             self.iter.next();
         }
 
-        match Self::is_keyword(&lxm) {
+        match TokenKind::match_keyword(&lxm) {
             Some(tk) if tk.is_permission() => {
                 if let Some(lt) = self.tokens.last_mut() {
                     if lt.kind.eq(&TokenKind::Div) && lt.pos.col == self.pos.col - 1 {
@@ -84,10 +84,7 @@ impl<'a> Lexer<'a> {
         let kind: TokenKind = match self.iter.next() {
             Some(ch) => match TokenKind::match_punctuation(&ch) {
                 Some(res) => res,
-                None => {
-                    self.t_push(TokenKind::Undef(ch), 0, 1);
-                    return;
-                }
+                None => todo!(),
             },
             None => {
                 self.t_push(TokenKind::EOF, 0, 1);
@@ -166,51 +163,125 @@ impl<'a> Lexer<'a> {
 
     fn get_string(&mut self) /* -> Result<char, Error> */
     {
-        todo!()
+        self.iter.next();
+        let mut esc_flag = false;
+        let mut lxm: String = String::new();
+        let mut span: LnCol = LnCol::new(0, 0);
+
+        loop {
+            match self.iter.next() {
+                Some(ch) => {
+                    if esc_flag == true {
+                        match ch {
+                            'n' | 't' | '0' | 'r' | '\'' | '\"' | '\\' => {}
+                            _ => eprintln!("ronin::lexer >> invalid character escape"),
+                        }
+                    }
+                    if ch == '"' && esc_flag == false {
+                        break;
+                    } else if ch == '\r' {
+                        continue;
+                    } else if ch == '\n' {
+                        println!("\\n enocuntered");
+                        lxm.push('\\');
+                        lxm.push('n');
+
+                        span.ln += 1;
+                        span.col = 0;
+                        continue;
+                    } else if ch == '\t' {
+                        println!("\\t enocuntered");
+                        lxm.push(' ');
+                        lxm.push(' ');
+                        lxm.push(' ');
+                        lxm.push(' ');
+
+                        span.col += 4;
+                        continue;
+                    }
+
+                    esc_flag = false;
+                    if ch == '\\' {
+                        esc_flag = true;
+                    }
+
+                    span.col += 1;
+                    lxm.push(ch);
+                }
+                None => {
+                    eprintln!("ronin::lexer >> unexpected EOF");
+                    // --> src\roninc\lexer.rs:194:101 #aquamarine
+                    eprintln!(
+                        "ronin::lexer >> string is missing a trailing character '\"' {}, {}",
+                        self.pos.ln, self.pos.col
+                    );
+                    return;
+                }
+            }
+        }
+
+        println!("{lxm}");
+
+        self.t_push(
+            TokenKind::Literal(LitKind::Integer(lxm.clone())),
+            span.ln,
+            span.col,
+        )
     }
 
     fn get_char(&mut self) /* -> Result<char, Error> */
     {
         self.iter.next();
-        let mut it: usize = 0;
+        let mut esc_flag = false;
         let mut lxm: [char; 2] = ['\0', '\0'];
-        while let Some(&ch) = self.iter.peek() {
-            if it == 2 {
-                break;
+
+        match self.iter.next() {
+            Some(ch) if ch == '\'' => {
+                eprintln!("ronin::lexer >> empty char literal");
+            }
+            Some(ch) => {
+                if ch == '\\' {
+                    esc_flag = true;
             }
 
-            lxm[it] = ch;
-
-            self.iter.next();
-            it += 1;
-        }
-
-        let cq = match self.iter.peek() {
-            Some(&c) => c,
-            None => return,
-        };
-
-        if lxm[0] == '\\' && cq != '\'' {
-            if lxm[1] == '\'' {
-                eprintln!("roninc::lexer >> unescaped character");
-            } else {
-                eprintln!("roninc::lexer >> char literal is missing a closing sign");
+                lxm[0] = ch;
             }
-            /* todo! => push error into error buffer with non-crit flag */
+            None => {
+                eprintln!("unexpected EOF");
+                return;
+        }
         }
 
-        if lxm[0] == '\'' {
-            eprintln!("roninc::lexer >> empty char literal");
+        if esc_flag == true {
+            match self.iter.next() {
+                Some(ch) => {
+                    lxm[1] = ch;
+                }
+                None => {
+                    eprintln!("ronin::lexer >> unexpected EOF");
+                    return;
+            }
+            }
         }
 
-        if lxm[0] != '\\' && lxm[1] != '\'' {
-            eprintln!("roninc::lexer >> character literal may only contain one codepoint");
+        match self.iter.peek() {
+            Some(&ch) => {
+                if ch != '\'' {
+                    eprintln!("ronin::lexer >> char literal is missing a closing quote");
         }
-
-        println!("{}{}", lxm[0], lxm[1]);
+            }
+            None => {
+                eprintln!("ronin::lexer >> unexpected EOF");
+                return;
+            }
+        }
 
         self.t_push(
-            TokenKind::Literal(LitKind::Char(lxm.iter().collect())),
+            TokenKind::Literal(LitKind::Char(if esc_flag == true {
+                lxm.iter().collect()
+            } else {
+                lxm.index(0).to_string()
+            })),
             0,
             lxm.len(),
         );

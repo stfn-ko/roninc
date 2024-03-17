@@ -1,5 +1,6 @@
-'a'
-'\n'
-'''
-'\'
-''
+fn main() -> i32 {
+    char c1 = 'a';
+    str c2 = "hello world!\";
+
+    return 0;
+}
