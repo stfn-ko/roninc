@@ -5,6 +5,7 @@ pub(crate) struct Lexer<'a> {
     pub tokens: &'a mut Vec<Token>,
     pub iter: Peekable<Chars<'a>>,
     pub pos: LnCol,
+    path: &'a str,
 }
 
 pub fn emit_tokens(path: &str) -> Result<Vec<Token>, Error> {
@@ -17,7 +18,7 @@ pub fn emit_tokens(path: &str) -> Result<Vec<Token>, Error> {
     };
 
     let mut tokens = Vec::new();
-    let mut lexer = Lexer::new(&input, &mut tokens);
+    let mut lexer = Lexer::new(path, &input, &mut tokens);
 
     while let Some(ch) = lexer.iter.peek() {
         match ch {
@@ -35,11 +36,12 @@ pub fn emit_tokens(path: &str) -> Result<Vec<Token>, Error> {
 }
 
 impl<'a> Lexer<'a> {
-    fn new(input: &'a str, tokens: &'a mut Vec<Token>) -> Self {
+    fn new(path: &'a str, input: &'a str, tokens: &'a mut Vec<Token>) -> Self {
         Self {
-            tokens: tokens,
+            tokens,
             iter: input.chars().peekable(),
             pos: LnCol::new(1, 1),
+            path,
         }
     }
 
@@ -106,25 +108,6 @@ impl<'a> Lexer<'a> {
                 self.iter.next();
             }
             None => self.t_push(kind, 0, 1),
-        }
-    }
-
-    fn is_keyword(lxm: &str) -> Option<TokenKind> {
-        match lxm {
-            "i32" => Some(TokenKind::I32),
-            "u32" => Some(TokenKind::U32),
-            "if" => Some(TokenKind::If),
-            "fn" => Some(TokenKind::Fn),
-            "return" => Some(TokenKind::Return),
-            "isize" => Some(TokenKind::Isize),
-            "usize" => Some(TokenKind::Usize),
-            "f32" => Some(TokenKind::F32),
-            "main" => Some(TokenKind::Main),
-            "true" => Some(TokenKind::True),
-            "false" => Some(TokenKind::False),
-            "r" => Some(TokenKind::Permission(PermKind::R)),
-            "rw" => Some(TokenKind::Permission(PermKind::RW)),
-            _ => None,
         }
     }
 
@@ -242,14 +225,14 @@ impl<'a> Lexer<'a> {
             Some(ch) => {
                 if ch == '\\' {
                     esc_flag = true;
-            }
+                }
 
                 lxm[0] = ch;
             }
             None => {
                 eprintln!("unexpected EOF");
                 return;
-        }
+            }
         }
 
         if esc_flag == true {
@@ -260,7 +243,7 @@ impl<'a> Lexer<'a> {
                 None => {
                     eprintln!("ronin::lexer >> unexpected EOF");
                     return;
-            }
+                }
             }
         }
 
@@ -268,7 +251,7 @@ impl<'a> Lexer<'a> {
             Some(&ch) => {
                 if ch != '\'' {
                     eprintln!("ronin::lexer >> char literal is missing a closing quote");
-        }
+                }
             }
             None => {
                 eprintln!("ronin::lexer >> unexpected EOF");
