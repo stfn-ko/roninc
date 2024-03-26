@@ -1,4 +1,4 @@
-use crate::roninc::token::{LitKind, LnCol, PermKind, Token, TokenKind};
+use crate::roninc::token::{LitKind, LnCol, Token, TokenKind};
 use std::{fmt::Error, fs, iter::Peekable, str::Chars};
 
 pub(crate) struct Lexer<'a> {
