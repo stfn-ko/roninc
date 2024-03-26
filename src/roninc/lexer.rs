@@ -199,7 +199,7 @@ impl<'a> Lexer<'a> {
             }
         }
 
-        self.t_push(TokenKind::Literal(LitKind::Char(lxm)), ln, col)
+        self.t_push(TokenKind::Literal(LitKind::String(lxm)), ln, col)
     }
 
     fn get_char(&mut self) /* -> Result<char, Error> */
