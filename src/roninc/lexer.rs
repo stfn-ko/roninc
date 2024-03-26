@@ -1,4 +1,4 @@
-use crate::roninc::token::{LitKind, LnCol, PermKind, Token, TokenKind};
+use crate::roninc::token::{LitKind, LnCol, Token, TokenKind};
 use std::{fmt::Error, fs, iter::Peekable, str::Chars};
 
 pub(crate) struct Lexer<'a> {
@@ -11,7 +11,7 @@ pub fn emit_tokens(path: &str) -> Result<Vec<Token>, Error> {
     let input: String = match fs::read_to_string(path) {
         Ok(res) => res,
         Err(err) => {
-            eprintln!("emit_tokens: {err}");
+            eprintln!("lexer::emit_tokens >> {err}");
             return Err(Error);
         }
     };
@@ -23,6 +23,8 @@ pub fn emit_tokens(path: &str) -> Result<Vec<Token>, Error> {
         match ch {
             ch if ch.is_whitespace() => lexer.skip_whitespace(),
             '#' => lexer.skip_comments(),
+            '\"' => lexer.get_string(),
+            '\'' => lexer.get_char(),
             _ => lexer.get_tokens(),
         }
     }
@@ -63,7 +65,7 @@ impl<'a> Lexer<'a> {
             self.iter.next();
         }
 
-        match Self::is_keyword(&lxm) {
+        match TokenKind::match_keyword(&lxm) {
             Some(tk) if tk.is_permission() => {
                 if let Some(lt) = self.tokens.last_mut() {
                     if lt.kind.eq(&TokenKind::Div) && lt.pos.col == self.pos.col - 1 {
@@ -78,16 +80,11 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    // &=0
-    //   ^
     fn get_punctuation(&mut self) {
         let kind: TokenKind = match self.iter.next() {
             Some(ch) => match TokenKind::match_punctuation(&ch) {
                 Some(res) => res,
-                None => {
-                    self.t_push(TokenKind::Undef(ch), 0, 1);
-                    return;
-                }
+                None => todo!(),
             },
             None => {
                 self.t_push(TokenKind::EOF, 0, 1);
@@ -109,25 +106,6 @@ impl<'a> Lexer<'a> {
                 self.iter.next();
             }
             None => self.t_push(kind, 0, 1),
-        }
-    }
-
-    fn is_keyword(lxm: &str) -> Option<TokenKind> {
-        match lxm {
-            "i32" => Some(TokenKind::I32),
-            "u32" => Some(TokenKind::U32),
-            "if" => Some(TokenKind::If),
-            "fn" => Some(TokenKind::Fn),
-            "return" => Some(TokenKind::Return),
-            "isize" => Some(TokenKind::Isize),
-            "usize" => Some(TokenKind::Usize),
-            "f32" => Some(TokenKind::F32),
-            "main" => Some(TokenKind::Main),
-            "true" => Some(TokenKind::True),
-            "false" => Some(TokenKind::False),
-            "r" => Some(TokenKind::Permission(PermKind::R)),
-            "rw" => Some(TokenKind::Permission(PermKind::RW)),
-            _ => None,
         }
     }
 
@@ -162,6 +140,82 @@ impl<'a> Lexer<'a> {
                 lxm.len(),
             ),
         }
+    }
+
+    fn get_string(&mut self) /* -> Result<char, Error> */
+    {
+        self.iter.next();
+        let mut esc_flag: bool = false;
+        let mut lxm: String = String::new();
+        let (mut ln, mut col) = (0, 1);
+
+        loop {
+            col += 1;
+
+            match self.iter.next() {
+                Some(ch) => {
+                    if ch == '\"' && esc_flag == false {
+                        break;
+                    }
+
+                    if ch == '\\' && esc_flag == false {
+                        esc_flag = true
+                    } else if esc_flag == true {
+                        esc_flag = false
+                    }
+
+                    if ch == '\n' {
+                        ln += 1;
+                        col = 1;
+                    } else if ch == '\t' {
+                        col += 4
+                    }
+
+                    lxm.push(ch);
+                }
+                None => {
+                    eprintln!("Syntax Error >> string literal is missing a `\"` trailing symbol");
+                    panic!();
+                }
+            }
+        }
+
+        self.t_push(TokenKind::Literal(LitKind::String(lxm)), ln, col)
+    }
+
+    fn get_char(&mut self) /* -> Result<char, Error> */
+    {
+        self.iter.next();
+        let mut esc_flag: bool = false;
+        let mut lxm: String = String::new();
+
+        loop {
+            match self.iter.next() {
+                Some(ch) => {
+                    if ch == '\'' && esc_flag == false {
+                        break;
+                    }
+
+                    if ch == '\\' && esc_flag == false {
+                        esc_flag = true
+                    } else if esc_flag == true {
+                        esc_flag = false
+                    }
+
+                    lxm.push(ch);
+                }
+                None => {
+                    eprintln!("Syntax Error >> character literal is missing a `'` trailing symbol");
+                    panic!();
+                }
+            }
+        }
+
+        self.t_push(
+            TokenKind::Literal(LitKind::Char(lxm.clone())),
+            0,
+            lxm.len() + 2,
+        )
     }
 
     fn skip_whitespace(&mut self) {

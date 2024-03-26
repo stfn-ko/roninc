@@ -19,7 +19,7 @@ pub struct Token {
 
 #[derive(Debug)]
 pub enum LitKind {
-    Char(char),
+    Char(String),
     Integer(String),
     Float(String),
     String(String),
@@ -40,7 +40,6 @@ pub enum Delimiter {
 
 #[derive(Debug)]
 pub enum TokenKind {
-    Undef(char),
     Ident(String),
     Literal(LitKind),
     Permission(PermKind),
@@ -85,6 +84,7 @@ pub enum TokenKind {
     U32,
     Usize,
     F32,
+    AsciiChar,
     True,
     False,
     EOF,
@@ -118,7 +118,6 @@ impl PartialEq for PermKind {
 impl PartialEq for TokenKind {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
-            (Self::Undef(l0), Self::Undef(r0)) => l0 == r0,
             (Self::Ident(l0), Self::Ident(r0)) => l0 == r0,
             (Self::Literal(l0), Self::Literal(r0)) => l0 == r0,
             (Self::Permission(l0), Self::Permission(r0)) => l0 == r0,
@@ -134,6 +133,26 @@ impl TokenKind {
         match self {
             TokenKind::Permission(_perm_kind) => true,
             _ => false,
+        }
+    }
+
+    pub(crate) fn match_keyword(lxm: &str) -> Option<TokenKind> {
+        match lxm {
+            "i32" => Some(TokenKind::I32),
+            "u32" => Some(TokenKind::U32),
+            "char" => Some(TokenKind::AsciiChar),
+            "if" => Some(TokenKind::If),
+            "fn" => Some(TokenKind::Fn),
+            "return" => Some(TokenKind::Return),
+            "isize" => Some(TokenKind::Isize),
+            "usize" => Some(TokenKind::Usize),
+            "f32" => Some(TokenKind::F32),
+            "main" => Some(TokenKind::Main),
+            "true" => Some(TokenKind::True),
+            "false" => Some(TokenKind::False),
+            "r" => Some(TokenKind::Permission(PermKind::R)),
+            "rw" => Some(TokenKind::Permission(PermKind::RW)),
+            _ => None,
         }
     }
 
