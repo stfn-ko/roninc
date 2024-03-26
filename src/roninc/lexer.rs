@@ -109,25 +109,6 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn is_keyword(lxm: &str) -> Option<TokenKind> {
-        match lxm {
-            "i32" => Some(TokenKind::I32),
-            "u32" => Some(TokenKind::U32),
-            "if" => Some(TokenKind::If),
-            "fn" => Some(TokenKind::Fn),
-            "return" => Some(TokenKind::Return),
-            "isize" => Some(TokenKind::Isize),
-            "usize" => Some(TokenKind::Usize),
-            "f32" => Some(TokenKind::F32),
-            "main" => Some(TokenKind::Main),
-            "true" => Some(TokenKind::True),
-            "false" => Some(TokenKind::False),
-            "r" => Some(TokenKind::Permission(PermKind::R)),
-            "rw" => Some(TokenKind::Permission(PermKind::RW)),
-            _ => None,
-        }
-    }
-
     fn get_nums(&mut self) {
         let mut dot: bool = false;
         let mut lxm = String::new();
