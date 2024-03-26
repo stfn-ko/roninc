@@ -11,10 +11,17 @@ pub enum ErrorT {
     Lexical(String),
 }
 
+impl Error {
+    pub(crate) fn print(&self) {
+        // --> src\roninc\lexer.rs:194:101 #aquamarine
+    }
+}
+
 impl<'a> Errors<'a> {
     /// Creates a new [`Errors`].
-    pub(crate) fn new(path: &'a str, buffer: Vec<Error>) -> Self {
-        Errors { path, buffer}
+    pub(crate) fn new(path: &'a str) -> Self {
+        let mut buffer = Vec::new();
+        Errors { path, buffer }
     }
 
     pub(crate) fn new_err(err_t: ErrorT, rec: bool) -> Error {

@@ -1,11 +1,12 @@
+use crate::roninc::error::*;
 use crate::roninc::token::{LitKind, LnCol, Token, TokenKind};
 use std::{fmt::Error, fs, iter::Peekable, ops::Index, str::Chars};
 
 pub(crate) struct Lexer<'a> {
     pub tokens: &'a mut Vec<Token>,
     pub iter: Peekable<Chars<'a>>,
+    pub err: Errors<'a>,
     pub pos: LnCol,
-    path: &'a str,
 }
 
 pub fn emit_tokens(path: &str) -> Result<Vec<Token>, Error> {
@@ -40,8 +41,8 @@ impl<'a> Lexer<'a> {
         Self {
             tokens,
             iter: input.chars().peekable(),
+            err: Errors::new(path),
             pos: LnCol::new(1, 1),
-            path,
         }
     }
 
@@ -157,7 +158,14 @@ impl<'a> Lexer<'a> {
                     if esc_flag == true {
                         match ch {
                             'n' | 't' | '0' | 'r' | '\'' | '\"' | '\\' => {}
-                            _ => eprintln!("ronin::lexer >> invalid character escape"),
+                            _ => self.err.push_err(
+                                ErrorT::Lexical(
+                                    "invalid character escape: \'".to_owned()
+                                        + &ch.to_string()
+                                        + "\'",
+                                ),
+                                false,
+                            ),
                         }
                     }
                     if ch == '"' && esc_flag == false {
@@ -193,7 +201,7 @@ impl<'a> Lexer<'a> {
                 }
                 None => {
                     eprintln!("ronin::lexer >> unexpected EOF");
-                    // --> src\roninc\lexer.rs:194:101 #aquamarine
+                    
                     eprintln!(
                         "ronin::lexer >> string is missing a trailing character '\"' {}, {}",
                         self.pos.ln, self.pos.col
