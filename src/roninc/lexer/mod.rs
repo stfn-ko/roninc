@@ -1,4 +1,5 @@
-use crate::roninc::token::{LitKind, LnCol, Token, TokenKind};
+pub mod token;
+use token::{LitKind, LnCol, Token, TokenKind};
 use std::{fmt::Error, fs, iter::Peekable, str::Chars};
 
 pub(crate) struct Lexer<'a> {
@@ -11,7 +12,7 @@ pub fn emit_tokens(path: &str) -> Result<Vec<Token>, Error> {
     let input: String = match fs::read_to_string(path) {
         Ok(res) => res,
         Err(err) => {
-            eprintln!("lexer::emit_tokens >> {err}");
+            eprintln!("ronin >> {err}");
             return Err(Error);
         }
     };
@@ -205,7 +206,9 @@ impl<'a> Lexer<'a> {
                     lxm.push(ch);
                 }
                 None => {
-                    eprintln!("Syntax Error >> character literal is missing a `'` trailing symbol");
+                    eprintln!(
+                        "Syntax Error >> character literal is missing a `\'` trailing symbol"
+                    );
                     panic!();
                 }
             }
