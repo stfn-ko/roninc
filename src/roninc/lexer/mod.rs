@@ -1,19 +1,16 @@
 pub mod token;
+use std::{fs, iter::Peekable, str::Chars};
 use token::{LitKind, LnCol, Token, TokenKind};
-use std::{fmt::Error, fs, iter::Peekable, str::Chars};
 
-pub(crate) struct Lexer<'a> {
-    pub tokens: &'a mut Vec<Token>,
-    pub iter: Peekable<Chars<'a>>,
-    pub pos: LnCol,
-}
+// // // // // // // // // // // // // // // //
 
-pub fn emit_tokens(path: &str) -> Result<Vec<Token>, Error> {
+pub type Tokens = Vec<Token>;
+
+pub fn emit_tokens(path: &str) -> Result<Tokens, std::io::Error> {
     let input: String = match fs::read_to_string(path) {
         Ok(res) => res,
         Err(err) => {
-            eprintln!("ronin >> {err}");
-            return Err(Error);
+            return Err(err);
         }
     };
 
@@ -35,8 +32,16 @@ pub fn emit_tokens(path: &str) -> Result<Vec<Token>, Error> {
     Ok(tokens)
 }
 
+// // // // // // // // // // // // // // // //
+
+pub(crate) struct Lexer<'a> {
+    pub tokens: &'a mut Tokens,
+    pub iter: Peekable<Chars<'a>>,
+    pub pos: LnCol,
+}
+
 impl<'a> Lexer<'a> {
-    fn new(input: &'a str, tokens: &'a mut Vec<Token>) -> Self {
+    fn new(input: &'a str, tokens: &'a mut Tokens) -> Self {
         Self {
             tokens: tokens,
             iter: input.chars().peekable(),
