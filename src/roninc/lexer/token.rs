@@ -1,9 +1,4 @@
-// Data
-// #[derive(Clone, Copy, Debug)]
-// pub struct Span {
-//     pub start: LnCol,
-//     pub end: LnCol,
-// }
+use core::fmt;
 
 #[derive(Clone, Copy, Debug)]
 pub struct LnCol {
@@ -11,11 +6,110 @@ pub struct LnCol {
     pub col: usize,
 }
 
+impl LnCol {
+    /// Creates a new [`Position`].
+    pub(crate) fn new(ln: usize, col: usize) -> Self {
+        LnCol { ln: ln, col: col }
+    }
+
+    pub(crate) fn update(&mut self, ln: usize, col: usize) -> Self {
+        let span = self.clone();
+
+        self.ln += ln;
+        self.col += col;
+
+        span
+    }
+}
+
+// // // // // // // // // // // // // // // //
+
 #[derive(Debug)]
 pub struct Token {
     pub kind: TokenKind,
     pub pos: LnCol,
 }
+
+impl Token {
+    /// Creates a new [`Token`].
+    pub(crate) fn new(kind: TokenKind, pos: LnCol) -> Token {
+        Token { kind, pos }
+    }
+}
+
+impl fmt::Display for TokenKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            // write!(f, "{}",self::)
+            TokenKind::Ident(val) => write!(f, "{val}"),
+            TokenKind::Literal(kind) => match kind {
+                LitKind::Char(val) => write!(f, "\'{val}\'"),
+                LitKind::Integer(val) => write!(f, "{val}"),
+                LitKind::Float(val) => write!(f, "{val}"),
+                LitKind::String(val) => write!(f, "\"{val}\""),
+            },
+            TokenKind::Permission(val) => match val {
+                PermKind::R => write!(f, "R"),
+                PermKind::RW => write!(f, "RW"),
+            },
+            TokenKind::ColonColon => write!(f, "ColonColon"),
+            TokenKind::GtEq => write!(f, "GtEq"),
+            TokenKind::LtEq => write!(f, "LtEq"),
+            TokenKind::EqEq => write!(f, "EqEq"),
+            TokenKind::NotEq => write!(f, "NotEq"),
+            TokenKind::MinusEq => write!(f, "MinusEq"),
+            TokenKind::PlusEq => write!(f, "PlusEq"),
+            TokenKind::RArrow => write!(f, "RArrow"),
+            TokenKind::AndAnd => write!(f, "AndAnd"),
+            TokenKind::OrOr => write!(f, "OrOr"),
+            TokenKind::At => write!(f, "At"),
+            TokenKind::Div => write!(f, "Div"),
+            TokenKind::BSlash => write!(f, "BSlash"),
+            TokenKind::Not => write!(f, "Not"),
+            TokenKind::Hashtag => write!(f, "Hashtag"),
+            TokenKind::Percent => write!(f, "Percent"),
+            TokenKind::And => write!(f, "And"),
+            TokenKind::Or => write!(f, "Or"),
+            TokenKind::Star => write!(f, "Star"),
+            TokenKind::SingleQuote => write!(f, "SingleQuote"),
+            TokenKind::DoubleQuote => write!(f, "DoubleQuote"),
+            TokenKind::Semi => write!(f, "Semi"),
+            TokenKind::Colon => write!(f, "Colon"),
+            TokenKind::Gt => write!(f, "Gt"),
+            TokenKind::Lt => write!(f, "Lt"),
+            TokenKind::Eq => write!(f, "Eq"),
+            TokenKind::Minus => write!(f, "Minus"),
+            TokenKind::Plus => write!(f, "Plus"),
+            TokenKind::Dot => write!(f, "Dot"),
+            TokenKind::Comma => write!(f, "Comma"),
+            TokenKind::OpenDelim(val) => match val {
+                Delimiter::Paren => write!(f, "Paren"),
+                Delimiter::Brace => write!(f, "Brace"),
+                Delimiter::Bracket => write!(f, "Bracket"),
+            },
+            TokenKind::CloseDelim(val) => match val {
+                Delimiter::Paren => write!(f, "Paren"),
+                Delimiter::Brace => write!(f, "Brace"),
+                Delimiter::Bracket => write!(f, "Bracket"),
+            },
+            TokenKind::Main => write!(f, "Main"),
+            TokenKind::Return => write!(f, "Return"),
+            TokenKind::If => write!(f, "If"),
+            TokenKind::Fn => write!(f, "Fn"),
+            TokenKind::I32 => write!(f, "I32"),
+            TokenKind::Isize => write!(f, "Isize"),
+            TokenKind::U32 => write!(f, "U32"),
+            TokenKind::Usize => write!(f, "Usize"),
+            TokenKind::F32 => write!(f, "F32"),
+            TokenKind::AsciiChar => write!(f, "AsciiChar"),
+            TokenKind::True => write!(f, "True"),
+            TokenKind::False => write!(f, "False"),
+            TokenKind::EOF => write!(f, "EOF"),
+        }
+    }
+}
+
+// // // // // // // // // // // // // // // //
 
 #[derive(Debug)]
 pub enum LitKind {
@@ -25,11 +119,33 @@ pub enum LitKind {
     String(String),
 }
 
+impl PartialEq for LitKind {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Char(l0), Self::Char(r0)) => l0 == r0,
+            (Self::Integer(l0), Self::Integer(r0)) => l0 == r0,
+            (Self::Float(l0), Self::Float(r0)) => l0 == r0,
+            (Self::String(l0), Self::String(r0)) => l0 == r0,
+            _ => false,
+        }
+    }
+}
+
+// // // // // // // // // // // // // // // //
+
 #[derive(Debug)]
 pub enum PermKind {
     R,
     RW,
 }
+
+impl PartialEq for PermKind {
+    fn eq(&self, other: &Self) -> bool {
+        core::mem::discriminant(self) == core::mem::discriminant(other)
+    }
+}
+
+// // // // // // // // // // // // // // // //
 
 #[derive(Debug)]
 pub enum Delimiter {
@@ -37,6 +153,14 @@ pub enum Delimiter {
     Brace,
     Bracket,
 }
+
+impl PartialEq for Delimiter {
+    fn eq(&self, other: &Self) -> bool {
+        core::mem::discriminant(self) == core::mem::discriminant(other)
+    }
+}
+
+// // // // // // // // // // // // // // // //
 
 #[derive(Debug)]
 pub enum TokenKind {
@@ -88,31 +212,6 @@ pub enum TokenKind {
     True,
     False,
     EOF,
-}
-
-// Implementations
-impl PartialEq for Delimiter {
-    fn eq(&self, other: &Self) -> bool {
-        core::mem::discriminant(self) == core::mem::discriminant(other)
-    }
-}
-
-impl PartialEq for LitKind {
-    fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (Self::Char(l0), Self::Char(r0)) => l0 == r0,
-            (Self::Integer(l0), Self::Integer(r0)) => l0 == r0,
-            (Self::Float(l0), Self::Float(r0)) => l0 == r0,
-            (Self::String(l0), Self::String(r0)) => l0 == r0,
-            _ => false,
-        }
-    }
-}
-
-impl PartialEq for PermKind {
-    fn eq(&self, other: &Self) -> bool {
-        core::mem::discriminant(self) == core::mem::discriminant(other)
-    }
 }
 
 impl PartialEq for TokenKind {
@@ -209,34 +308,5 @@ impl TokenKind {
             (Self::Or, Self::Or) => Some(Self::OrOr),
             (_, _) => None,
         }
-    }
-}
-
-impl LnCol {
-    /// Creates a new [`Position`].
-    pub(crate) fn new(ln: usize, col: usize) -> Self {
-        LnCol { ln: ln, col: col }
-    }
-
-    pub(crate) fn update(&mut self, ln: usize, col: usize) -> Self {
-        let span = self.clone();
-
-        self.ln += ln;
-        self.col += col;
-
-        span
-    }
-}
-
-// impl Span {
-//     pub(crate) fn new(start: LnCol, end: LnCol) -> Self {
-//         Span { start, end }
-//     }
-// }
-
-impl Token {
-    /// Creates a new [`Token`].
-    pub(crate) fn new(kind: TokenKind, pos: LnCol) -> Token {
-        Token { kind, pos }
     }
 }
