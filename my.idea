@@ -1,8 +1,0 @@
-text input (100 lines) -->  |-- thread 1 >> lines 1..= 25 => <tok_stream, error_stream>
-                            |-- thread 2 >> lines 26..= 50 => <tok_stream, error_stream>
-                            |-- thread 3 >> lines 51..= 75 => <tok_stream, error_stream>
-                            |-- thread 4 >> lines 76..= 100 => <tok_stream, error_stream>
-
-parser<o_thread_1, o_thread_2, o_thread_3, o_thread_4> -> ast
-
-
