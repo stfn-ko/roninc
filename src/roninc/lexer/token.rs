@@ -1,5 +1,7 @@
 use core::fmt;
 
+// // // // // // // // // // // // // // // // LN COL
+
 #[derive(Clone, Copy, Debug)]
 pub struct LnCol {
     pub ln: usize,
@@ -22,7 +24,15 @@ impl LnCol {
     }
 }
 
-// // // // // // // // // // // // // // // //
+// // // // // // // // // // // // // // // // SPAN
+
+#[derive(Debug)]
+pub struct Span {
+    pub start: LnCol,
+    pub end: LnCol,
+}
+
+// // // // // // // // // // // // // // // // TOKEN
 pub type Tokens = Vec<Token>;
 
 #[derive(Debug)]

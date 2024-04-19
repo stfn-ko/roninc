@@ -1,3 +1,4 @@
+mod error;
 mod lexer;
 mod parser;
 
@@ -10,7 +11,10 @@ pub fn compile(args: Vec<String>) {
     let tokens = match lexer::emit_tokens(&args[1]) {
         Ok(res) => res,
         Err(err) => {
-            eprintln!("{err}");
+            for e in err {
+                println!("{}", e)
+            }
+
             return;
         }
     };
@@ -18,7 +22,10 @@ pub fn compile(args: Vec<String>) {
     let ast = match parser::emit_ast(tokens) {
         Ok(res) => res,
         Err(err) => {
-            eprintln!("{err}");
+            for e in err {
+                println!("{}", e)
+            }
+
             return;
         }
     };
