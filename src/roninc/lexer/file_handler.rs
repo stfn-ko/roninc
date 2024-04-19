@@ -1,36 +1,33 @@
-pub mod file_handler {
-    use crate::roninc::error::roninx::FileHandlerError;
-    use std::fs;
+use std::fs;
 
-    pub struct Buffer {
-        pub address: String,
-        pub input: Vec<char>,
-        pub cursor: usize,
-    }
+pub struct Buffer {
+    pub address: String,
+    pub input: Vec<char>,
+    pub cursor: usize,
+}
 
-    impl Buffer {
-        fn new(address: &str, input: String) -> Self {
-            Buffer {
-                address: address.to_string(),
-                input: input.chars().collect(),
-                cursor: 0,
-            }
-        }
-
-        pub fn next(&mut self) -> Option<char> {
-            self.cursor += 1;
-            self.input.get(self.cursor - 1).copied()
-        }
-
-        pub fn peek(&self) -> Option<char> {
-            self.input.get(self.cursor).copied()
+impl Buffer {
+    fn new(address: &str, input: String) -> Self {
+        Buffer {
+            address: address.to_string(),
+            input: input.chars().collect(),
+            cursor: 0,
         }
     }
 
-    pub fn load_file_to_buffer(path: &str) -> Result<Buffer, FileHandlerError> {
-        return match fs::read_to_string(path) {
-            Ok(res) => Ok(Buffer::new(path, res)),
-            Err(e) => Err(FileHandlerError::IOErr(e)),
-        };
+    pub fn next(&mut self) -> Option<char> {
+        self.cursor += 1;
+        self.input.get(self.cursor - 1).copied()
     }
+
+    pub fn peek(&self) -> Option<char> {
+        self.input.get(self.cursor).copied()
+    }
+}
+
+pub fn load_file_to_buffer(path: &str) -> Result<Buffer, std::io::Error> {
+    return match fs::read_to_string(path) {
+        Ok(res) => Ok(Buffer::new(path, res)),
+        Err(e) => Err(e),
+    };
 }

@@ -23,6 +23,7 @@ impl LnCol {
 }
 
 // // // // // // // // // // // // // // // //
+pub type Tokens = Vec<Token>;
 
 #[derive(Debug)]
 pub struct Token {
