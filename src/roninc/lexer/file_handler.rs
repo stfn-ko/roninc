@@ -1,6 +1,4 @@
-use std::fs;
-
-use crate::roninc::error::{FileHandlerError, RoninError};
+use std::{fs, io};
 
 pub struct Buffer {
     pub address: String,
@@ -27,9 +25,9 @@ impl Buffer {
     }
 }
 
-pub fn load_file_to_buffer(path: &str) -> Result<Buffer, FileHandlerError> {
+pub fn load_file_to_buffer(path: &str) -> Result<Buffer, io::Error> {
     return match fs::read_to_string(path) {
         Ok(res) => Ok(Buffer::new(path, res)),
-        Err(e) => Err(FileHandlerError::IO(e)),
+        Err(err) => Err(err),
     };
 }
