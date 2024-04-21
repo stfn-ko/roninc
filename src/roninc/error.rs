@@ -1,6 +1,6 @@
 use super::lexer::token::Span;
 use core::fmt;
-use std::error::Error;
+use std::io;
 
 // // // // // // // // // // // // // // // //  ERROR FORMATTING TRAIT
 pub trait ErrorFormatting {
@@ -9,37 +9,11 @@ pub trait ErrorFormatting {
     fn error_verbose(&self) -> String;
 }
 
-// // // // // // // // // // // // // // // //  FILE HANDLER ERROR ENUM
-#[derive(Debug)]
-pub enum FileHandlerError {
-    IO(std::io::Error), // todo -> add more
-}
-
-impl ErrorFormatting for FileHandlerError {
-    fn error_code(&self) -> String {
-        match self {
-            FileHandlerError::IO(err) => format!("error[FHE{:02}]", err.kind() as usize + 1),
-        }
-    }
-
-    fn error_verbose(&self) -> String {
-        match self {
-            FileHandlerError::IO(err) => format!("{}", err.to_string()),
-        }
-    }
-
-    fn error_print(&self) {
-        eprintln!("{} :: {}\n", self.error_code(), self.error_verbose())
-    }
-}
-
 // // // // // // // // // // // // // // // //  LEXICAL ERROR ENUM
 #[derive(Debug, Clone, Copy)]
 pub enum LexicalError {
     IllegalCharacter,
     ExceedingLengthId,
-    IncorrectSpelling,
-    ExceedingLengthNum,
     StringMissingTrailingSign,
     CharacterMissingTrailingSign,
     // todo -> add more
@@ -54,8 +28,6 @@ impl ErrorFormatting for LexicalError {
         match self {
             LexicalError::IllegalCharacter => "llegal character".to_string(),
             LexicalError::ExceedingLengthId => "exceeding length of idenrifier".to_string(),
-            LexicalError::IncorrectSpelling => "incorrect spelling".to_string(),
-            LexicalError::ExceedingLengthNum => "exceeding length number literal".to_string(),
             LexicalError::StringMissingTrailingSign => {
                 "string is missing a trailing sign `\"`".to_string()
             }
