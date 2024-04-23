@@ -1,4 +1,4 @@
-use super::lexer::token::Span;
+use super::token::Span;
 use core::fmt;
 
 // // // // // // // // // // // // // // // //  ERROR FORMATTING TRAIT
