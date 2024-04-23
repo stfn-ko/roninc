@@ -5,7 +5,7 @@ pub struct AST {}
 
 pub(crate) fn emit_ast(tokens: Tokens) -> Result<AST, RoninErrors<SyntaxError>> {
     for t in tokens {
-        println!("{}", t.kind)
+        println!("{:#?}", t.kind)
     }
 
     Ok(AST {})

@@ -9,18 +9,25 @@ pub struct LnCol {
 }
 
 impl LnCol {
-    /// Creates a new [`Position`].
+    /// Creates a new [`LnCol`].
     pub(crate) fn new(ln: usize, col: usize) -> Self {
         LnCol { ln: ln, col: col }
     }
 
     pub(crate) fn update(&mut self, ln: usize, col: usize) -> Self {
-        let span = self.clone();
+        let lc = self.clone();
 
         self.ln += ln;
         self.col += col;
 
-        span
+        lc
+    }
+
+    pub(crate) fn add(&self, ln: usize, col: usize) -> Self {
+        Self {
+            ln: self.ln + ln,
+            col: self.col + col,
+        }
     }
 }
 
@@ -30,6 +37,12 @@ impl LnCol {
 pub struct Span {
     pub start: LnCol,
     pub end: LnCol,
+}
+
+impl Span {
+    pub(crate) fn new(start: LnCol, end: LnCol) -> Self {
+        Span { start, end }
+    }
 }
 
 // // // // // // // // // // // // // // // // TOKEN

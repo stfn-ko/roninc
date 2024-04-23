@@ -1,27 +1,46 @@
 use std::{fs, io};
 
 pub struct Buffer {
-    pub address: String,
-    pub input: Vec<char>,
+    pub filename: String,
+    pub symbols: Vec<char>,
     pub cursor: usize,
+    line_start: Vec<usize>,
 }
 
 impl Buffer {
-    fn new(address: &str, input: String) -> Self {
+    fn new(filename: &str, symbols: String) -> Self {
         Buffer {
-            address: address.to_string(),
-            input: input.chars().collect(),
+            filename: filename.to_string(),
+            symbols: symbols.chars().collect(),
             cursor: 0,
+            line_start: vec![0],
         }
     }
 
-    pub fn next(&mut self) -> Option<char> {
-        self.cursor += 1;
-        self.input.get(self.cursor - 1).copied()
+    pub fn get_line(&self, index: usize) -> String {
+        match self.line_start.get(index) {
+            Some(&idx) => self
+                .symbols
+                .iter()
+                .skip(idx)
+                .take_while(|&&ch| ch != '\n')
+                .collect(),
+
+            None => todo!(),
+        }
     }
 
-    pub fn peek(&self) -> Option<char> {
-        self.input.get(self.cursor).copied()
+    pub fn notfify_new_line(&mut self) {
+        self.line_start.push(self.cursor + 1);
+    }
+
+    pub fn next(&mut self) -> Option<&char> {
+        self.cursor += 1;
+        self.symbols.get(self.cursor - 1)
+    }
+
+    pub fn peek(&self) -> Option<&char> {
+        self.symbols.get(self.cursor)
     }
 }
 

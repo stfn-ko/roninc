@@ -1,6 +1,5 @@
 use super::lexer::token::Span;
 use core::fmt;
-use std::io;
 
 // // // // // // // // // // // // // // // //  ERROR FORMATTING TRAIT
 pub trait ErrorFormatting {
@@ -27,12 +26,12 @@ impl ErrorFormatting for LexicalError {
     fn error_verbose(&self) -> String {
         match self {
             LexicalError::IllegalCharacter => "llegal character".to_string(),
-            LexicalError::ExceedingLengthId => "exceeding length of idenrifier".to_string(),
+            LexicalError::ExceedingLengthId => "exceeding length of identifier".to_string(),
             LexicalError::StringMissingTrailingSign => {
-                "string is missing a trailing sign `\"`".to_string()
+                "string literal is missing a trailing sign `\"`".to_string()
             }
             LexicalError::CharacterMissingTrailingSign => {
-                "character is missing a trailing sign `\'`".to_string()
+                "character literal is missing a trailing sign `\'`".to_string()
             }
         }
     }
@@ -74,15 +73,15 @@ impl ErrorFormatting for SyntaxError {
 #[derive(Debug)]
 pub struct Context {
     filename: String,
-    line: Vec<String>,
+    text: String,
     span: Span,
 }
 
 impl Context {
-    pub fn new(filename: String, line: Vec<String>, span: Span) -> Self {
+    pub fn new(filename: &str, text: String, span: Span) -> Self {
         Context {
-            filename,
-            line,
+            filename: filename.to_string(),
+            text,
             span,
         }
     }
@@ -94,26 +93,42 @@ pub type RoninErrors<ErrKind> = Vec<RoninError<ErrKind>>;
 #[derive(Debug)]
 pub struct RoninError<ErrKind> {
     pub kind: ErrKind,
-    pub context: Option<Context>,
+    context: Option<Context>,
 }
 
 impl<ErrKind: ErrorFormatting> fmt::Display for RoninError<ErrKind> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match &self.context {
-            Some(ctx) => write!(
-                f,
-                " {} | {} :: {}",
-                ctx.span.start.ln,
-                self.kind.error_code(),
-                self.kind.error_verbose()
-            ),
-            None => todo!(),
-        }
+        write!(
+            f,
+            "{} :: {}",
+            self.kind.error_code(),
+            self.kind.error_verbose()
+        )
     }
 }
 
 impl<ErrKind> RoninError<ErrKind> {
-    pub fn generate(kind: ErrKind, context: Option<Context>) -> Result<(), RoninError<ErrKind>> {
-        Err(RoninError { kind, context })
+    pub fn generate(kind: ErrKind) -> RoninError<ErrKind> {
+        RoninError {
+            kind,
+            context: None,
+        }
+    }
+
+    pub fn attach(self, filename: String, text: String, span: Span) -> RoninError<ErrKind> {
+        RoninError {
+            kind: self.kind,
+            context: Some(Context {
+                filename,
+                text,
+                span,
+            }),
+        }
     }
 }
+
+// Some(Context::new(
+//     &self.buffer.filename,
+//     self.buffer.get_line(self.pos.ln),
+//     Span::new(self.pos, self.pos.add(0, len_ct as usize)),
+// )

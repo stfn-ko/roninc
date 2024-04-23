@@ -3,7 +3,7 @@ pub mod token;
 
 use std::process::exit;
 
-use crate::roninc::error::ErrorFormatting;
+use self::token::Span;
 
 use super::error::{LexicalError, RoninError, RoninErrors};
 use file_handler::*;
@@ -12,12 +12,12 @@ use token::{LitKind, LnCol, Token, TokenKind, Tokens};
 // // // // // // // // // // // // // // // //
 
 pub fn emit_tokens(path: &str) -> Result<Tokens, RoninErrors<LexicalError>> {
-    let mut lx_err = RoninErrors::<LexicalError>::new();
+    let mut lxr_err = RoninErrors::<LexicalError>::new();
 
     let buffer: Buffer = match load_file_to_buffer(path) {
         Ok(res) => res,
         Err(err) => {
-            err.error_print();
+            eprintln!("{err}");
             exit(0);
         }
     };
@@ -33,23 +33,26 @@ pub fn emit_tokens(path: &str) -> Result<Tokens, RoninErrors<LexicalError>> {
         match ch {
             '#' => lexer.skip_comments(),
             '\"' => match lexer.get_string() {
-                Ok(_) => continue,
-                Err(e) => lx_err.push(e),
+                Ok(_) => {}
+                Err(e) => lxr_err.push(e),
             },
             '\'' => match lexer.get_char() {
-                Ok(_) => continue,
-                Err(e) => lx_err.push(e),
+                Ok(_) => {}
+                Err(e) => lxr_err.push(e),
             },
             _ => match lexer.get_tokens() {
-                Ok(_) => continue,
-                Err(e) => lx_err.push(e),
+                Ok(_) => {}
+                Err(e) => lxr_err.push(e),
             },
         }
     }
 
-    lexer.end();
+    lexer.push_eof();
 
-    Ok(lexer.tokens)
+    match lxr_err.is_empty() {
+        true => Ok(lexer.tokens),
+        false => Err(lxr_err),
+    }
 }
 
 // // // // // // // // // // // // // // // //
@@ -82,21 +85,36 @@ impl Lexer {
     }
 
     fn get_id(&mut self) -> Result<(), RoninError<LexicalError>> {
+        let mut len_ct: u8 = 0;
         let mut lxm = String::new();
 
         while let Some(ch) = self.buffer.peek() {
-            match !ch.is_alphanumeric() && ch != '_' {
+            match !ch.is_alphanumeric() && *ch != '_' {
                 true => break,
                 false => {
-                    lxm.push(ch);
+                    len_ct += 1;
+
+                    lxm.push(*ch);
                     self.buffer.next();
                 }
             }
         }
 
-        match TokenKind::match_keyword(&lxm) {
-            Some(tk) => return self.handle_permission(tk, &lxm),
-            None => Ok(self.t_push(TokenKind::Ident(lxm.clone()), 0, lxm.len())),
+        if len_ct > 30 {
+            return Err(
+                RoninError::generate(LexicalError::ExceedingLengthId).attach(
+                    self.buffer.filename.to_owned(),
+                    self.buffer.get_line(self.pos.ln),
+                    Span::new(self.pos, self.pos.add(0, len_ct as usize)),
+                ),
+            );
+        } else {
+            match TokenKind::match_keyword(&lxm) {
+                Some(tk) => return self.handle_permission(tk, &lxm),
+                None => self.t_push(TokenKind::Ident(lxm.clone()), 0, lxm.len()),
+            }
+
+            Ok(())
         }
     }
 
@@ -128,7 +146,7 @@ impl Lexer {
         let kind: TokenKind = match self.buffer.next() {
             Some(ch) => match TokenKind::match_punctuation(&ch) {
                 Some(res) => res,
-                None => return RoninError::generate(LexicalError::IllegalCharacter, None),
+                None => return Err(RoninError::generate(LexicalError::IllegalCharacter)),
             },
             None => return Ok(self.t_push(TokenKind::EOF, 0, 1)),
         };
@@ -151,7 +169,7 @@ impl Lexer {
         let mut dot: bool = false;
         let mut lxm = String::new();
 
-        while let Some(ch) = self.buffer.peek() {
+        while let Some(&ch) = self.buffer.peek() {
             match ch {
                 '0'..='9' => {
                     lxm.push(ch);
@@ -163,7 +181,7 @@ impl Lexer {
                     self.buffer.next();
                 }
                 ' ' | ';' => break,
-                _ => return RoninError::generate(LexicalError::IllegalCharacter, None),
+                _ => return Err(RoninError::generate(LexicalError::IllegalCharacter)),
             }
         }
 
@@ -191,7 +209,7 @@ impl Lexer {
             col += 1;
 
             match self.buffer.next() {
-                Some(ch) => {
+                Some(&ch) => {
                     if ch == '\"' && esc_flag == false {
                         break;
                     }
@@ -211,7 +229,11 @@ impl Lexer {
 
                     lxm.push(ch);
                 }
-                None => return RoninError::generate(LexicalError::StringMissingTrailingSign, None),
+                None => {
+                    return Err(RoninError::generate(
+                        LexicalError::StringMissingTrailingSign,
+                    ))
+                }
             }
         }
 
@@ -225,7 +247,7 @@ impl Lexer {
 
         loop {
             match self.buffer.next() {
-                Some(ch) => {
+                Some(&ch) => {
                     if ch == '\'' && esc_flag == false {
                         break;
                     }
@@ -239,7 +261,9 @@ impl Lexer {
                     lxm.push(ch);
                 }
                 None => {
-                    return RoninError::generate(LexicalError::CharacterMissingTrailingSign, None)
+                    return Err(RoninError::generate(
+                        LexicalError::CharacterMissingTrailingSign,
+                    ))
                 }
             }
         }
@@ -252,12 +276,13 @@ impl Lexer {
     }
 
     fn skip_whitespace(&mut self) {
-        while let Some(ch) = self.buffer.peek() {
+        while let Some(&ch) = self.buffer.peek() {
             if !ch.is_whitespace() {
                 break;
             }
 
             if ch == '\n' {
+                self.buffer.notfify_new_line();
                 self.pos.ln += 1;
                 self.pos.col = 1;
             } else {
@@ -269,8 +294,9 @@ impl Lexer {
     }
 
     fn skip_comments(&mut self) {
-        while let Some(ch) = self.buffer.next() {
+        while let Some(&ch) = self.buffer.next() {
             if ch == '\n' {
+                self.buffer.notfify_new_line();
                 break;
             }
         }
@@ -282,7 +308,7 @@ impl Lexer {
         self.tokens.push(Token::new(tk, self.pos.update(ln, col)));
     }
 
-    fn end(&mut self) {
+    fn push_eof(&mut self) {
         self.t_push(TokenKind::EOF, 0, 1)
     }
 }
